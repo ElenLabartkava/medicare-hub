@@ -26,3 +26,42 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* GPU-Accelerated Interactive Card Hover */
+.interactive-card {
+  transition:
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.25s ease;
+  will-change: transform;
+}
+
+.interactive-card:hover {
+  transform: translateY(-4px);
+}
+
+/* GPU-Accelerated Keyframes for Pulse Badge */
+@keyframes pulseIndicator {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+.pulse-badge {
+  animation: pulseIndicator 1.8s infinite ease-in-out;
+  will-change: transform, opacity;
+}
+
+/* Accessibility Focus Management */
+:focus-visible {
+  outline: 3px solid #0284c7 !important;
+  outline-offset: 2px !important;
+}

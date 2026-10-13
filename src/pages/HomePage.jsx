@@ -1,21 +1,62 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CardTemp from "../components/common/CardTemp";
 import { useDoctors } from "../hooks/useServices";
 
 export default function HomePage() {
   const { doctors, loading } = useDoctors();
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedTerm, setDebouncedTerm] = useState("");
+  const [bookedDoctor, setBookedDoctor] = useState(null);
 
-  // ექიმების გაფილტვრა სახელისა და სპეციალობის მიხედვით
+  // 1. Debouncing: 350ms დაყოვნება საძიებო ველზე
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedTerm(searchTerm);
+    }, 350);
+
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  // 2. ექიმების გაფილტვრა დაყოვნებული მნიშვნელობით (Debounced Value)
   const filteredDoctors = doctors.filter((doc) => {
-    const term = searchTerm.toLowerCase();
+    const term = debouncedTerm.toLowerCase();
     const nameMatch = doc.name?.toLowerCase().includes(term);
     const specMatch = doc.spec?.toLowerCase().includes(term);
     return nameMatch || specMatch;
   });
 
+  // 3. Event Delegation: ერთი დამმუშავებელი მშობელ კონტეინერზე
+  const handleListClick = (event) => {
+    const targetBtn = event.target.closest("button[data-action='book']");
+    if (!targetBtn) return;
+
+    const doctorId = targetBtn.dataset.id;
+    const doctorName = targetBtn.dataset.name;
+    setBookedDoctor({ id: doctorId, name: doctorName });
+  };
+
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
+      {/* შეტყობინება წარმატებულ ჯავშანზე */}
+      {bookedDoctor && (
+        <div
+          role="status"
+          className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 flex items-center justify-between"
+        >
+          <span>
+            ჯავშანი წარმატებით დადასტურდა ექიმთან:{" "}
+            <strong>{bookedDoctor.name}</strong>
+          </span>
+          <button
+            type="button"
+            onClick={() => setBookedDoctor(null)}
+            className="text-xs bg-white border border-emerald-300 px-3 py-1 rounded-md hover:bg-emerald-100"
+          >
+            დახურვა
+          </button>
+        </div>
+      )}
+
       {/* Hero სექცია */}
       <section className="text-center py-10 max-w-2xl mx-auto">
         <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-4">
@@ -50,9 +91,8 @@ export default function HomePage() {
         </form>
       </section>
 
-      {/* ძირითადი განლაგება: ფილტრები (aside) და სია (section) */}
+      {/* ძირითადი განლაგება */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 items-start mt-8">
-        {/* გვერდითი პანელი */}
         <aside
           aria-label="ფილტრები"
           className="bg-white p-5 border border-slate-200 rounded-xl shadow-sm"
@@ -99,10 +139,17 @@ export default function HomePage() {
           </form>
         </aside>
 
-        {/* ექიმების სია */}
-        <section className="md:col-span-3 space-y-4">
-          <h2 className="text-xl font-bold text-slate-900 mb-2">
-            ხელმისაწვდომი ექიმები
+        {/* ექიმების სია Event Delegation კონტეინერით */}
+        <section
+          onClick={handleListClick}
+          className="md:col-span-3 space-y-4"
+          aria-label="ექიმების სია"
+        >
+          <h2 className="text-xl font-bold text-slate-900 mb-2 flex items-center justify-between">
+            <span>ხელმისაწვდომი ექიმები</span>
+            <span className="text-xs font-normal text-slate-500">
+              სულ: {filteredDoctors.length}
+            </span>
           </h2>
 
           {loading ? (
@@ -113,10 +160,15 @@ export default function HomePage() {
             filteredDoctors.map((doc) => (
               <CardTemp key={doc.id}>
                 <div className="flex items-center gap-4">
-                  <figure className="m-0">
+                  <figure className="m-0 relative">
                     <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center text-3xl border border-slate-200">
                       {doc.avatar}
                     </div>
+                    {/* Pulse Loading / Status ინდიკატორი (GPU Keyframes) */}
+                    <span
+                      title="აქტიური ექიმი"
+                      className="pulse-badge absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white"
+                    />
                     <figcaption className="sr-only">
                       {doc.name} {doc.spec}
                     </figcaption>
@@ -141,7 +193,10 @@ export default function HomePage() {
                   </span>
                   <button
                     type="button"
-                    className="px-4 py-2 bg-sky-600 text-white text-xs font-semibold rounded-lg hover:bg-sky-700"
+                    data-action="book"
+                    data-id={doc.id}
+                    data-name={doc.name}
+                    className="px-4 py-2 bg-sky-600 text-white text-xs font-semibold rounded-lg hover:bg-sky-700 transition"
                   >
                     ვიზიტის დაჯავშნა
                   </button>

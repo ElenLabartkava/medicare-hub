@@ -1,16 +1,24 @@
-# React + Vite
+# ინტერაქციის ანალიზი და მიკრო-ინტერაქციები (MediCare Hub)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## არჩეული მოდული: ექიმის ვიზიტის დაჯავშნა და ძიება
 
-Currently, two official plugins are available:
+### 1. მიკრო-ინტერაქცია: ექიმის ბარათზე Hover ეფექტი
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Trigger (ტრიგერი):** მომხმარებლის მაუსის კურსორის მიტანა (Hover) ექიმის ბარათზე.
+- **Rules (წესები):** ჩაირთოს GPU-აქსელერირებული CSS გადასვლა (`transform: translateY(-4px)` და ჩრდილის გადიდება), რათა არ მოხდეს Layout Thrashing / CPU გადატვირთვა.
+- **Feedback (უკუკავშირი):** ბარათი გლუვად იწევს ზემოთ 4 პიქსელით და იკვეთება ჩრდილი.
+- **Loops / Modes:** დროებითი რეჟიმი (მაუსის მოცილებისას ბრუნდება საწყის მდგომარეობაში).
 
-## React Compiler
+### 2. მიკრო-ინტერაქცია: ხელმისაწვდომობის მფეთქავი ინდიკატორი (Pulse Indicator)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Trigger (ტრიგერი):** კომპონენტის ჩატვირთვა ეკრანზე.
+- **Rules (წესები):** `@keyframes pulseIndicator` მუშაობს მხოლოდ `transform: scale()` და `opacity` თვისებებზე 1.8 წამიანი პერიოდით.
+- **Feedback (უკუკავშირი):** მწვანე წერტილის უწყვეტი, რბილი ფეთქვა, რაც მიუთითებს ექიმის აქტიურ სტატუსზე.
+- **Loops / Modes:** უწყვეტი ციკლი (Infinite Loop).
 
-## Expanding the ESLint configuration
+### 3. მიკრო-ინტერაქცია: ექიმთან ვიზიტის დაჯავშნის ღილაკი
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- **Trigger (ტრიგერი):** მომხმარებლის კლიკი „ვიზიტის დაჯავშნა“ ღილაკზე.
+- **Rules (წესები):** მოვლენა იჭერება მშობელ კონტეინერზე Event Delegation-ით (`data-action="book"`), სისტემა აფიქსირებს არჩეული ექიმის ID-სა და სახელს და ეკრანზე აგენერირებს სტატუსის ბლოკს.
+- **Feedback (უკუკავშირი):** გვერდის თავში მწვანე შეტყობინების გამოჩენა ჯავშნის დადასტურების შესახებ.
+- **Loops / Modes:** მდგომარეობის შეცვლა (დახურვამდე აქტიური რჩება).
