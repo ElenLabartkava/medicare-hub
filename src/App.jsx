@@ -1,5 +1,6 @@
 import { useState } from "react";
 import HomePage from "./pages/HomePage";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState("home");
@@ -7,7 +8,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col text-slate-800">
-      {/* ჰედერი ჰამბურგერ მენიუთი */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -16,7 +16,6 @@ export default function App() {
             </span>
           </div>
 
-          {/* Desktop ნავიგაცია */}
           <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-600">
             <button
               onClick={() => setCurrentPage("home")}
@@ -39,11 +38,10 @@ export default function App() {
             </button>
           </nav>
 
-          {/* Hamburger ღილაკი მობილურისთვის */}
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition focus-visible:ring-2 focus-visible:ring-sky-500"
+            className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition"
             aria-label="მენიუს გახსნა"
           >
             <svg
@@ -71,9 +69,8 @@ export default function App() {
           </button>
         </div>
 
-        {/* Mobile Dropdown მენიუ */}
         {isMobileMenuOpen && (
-          <nav className="md:hidden border-t border-slate-200 bg-white px-4 py-3 space-y-2 shadow-lg animate-in slide-in-from-top duration-200">
+          <nav className="md:hidden border-t border-slate-200 bg-white px-4 py-3 space-y-2 shadow-lg">
             <button
               onClick={() => {
                 setCurrentPage("home");
@@ -102,23 +99,24 @@ export default function App() {
         )}
       </header>
 
-      {/* ძირითადი კონტენტი */}
+      {/* Error Boundary-ით შეფუთული მთავარი შინაარსი */}
       <div className="flex-1">
-        {currentPage === "home" ? (
-          <HomePage />
-        ) : (
-          <div className="max-w-4xl mx-auto py-16 px-4 text-center">
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">
-              ჩვენ შესახებ
-            </h2>
-            <p className="text-slate-600">
-              MediCare Hub – თქვენი სანდო სამედიცინო პარტნიორი.
-            </p>
-          </div>
-        )}
+        <ErrorBoundary>
+          {currentPage === "home" ? (
+            <HomePage />
+          ) : (
+            <div className="max-w-4xl mx-auto py-16 px-4 text-center">
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                ჩვენ შესახებ
+              </h2>
+              <p className="text-slate-600">
+                MediCare Hub – თქვენი სანდო სამედიცინო პარტნიორი.
+              </p>
+            </div>
+          )}
+        </ErrorBoundary>
       </div>
 
-      {/* ფუტერი */}
       <footer className="bg-white border-t border-slate-200 py-6 text-slate-500 text-xs">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p>© 2026 MediCare Hub. ყველა უფლება დაცულია.</p>

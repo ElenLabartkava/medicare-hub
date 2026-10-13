@@ -1,16 +1,28 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { fetchDoctors } from "../services/api";
 
 export function useDoctors() {
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
+  const [simulateError, setSimulateError] = useState(false);
 
-  useEffect(() => {
-    fetchDoctors().then((docs) => {
-      setDoctors(docs);
+  const loadData = useCallback(() => {
+    setLoading(true);
+    fetchDoctors(simulateError).then((res) => {
+      setDoctors(res.data);
+      setIsOffline(res.isOfflineFallback);
       setLoading(false);
     });
-  }, []);
+  }, [simulateError]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const toggleSimulateError = () => {
+    setSimulateError((prev) => !prev);
+  };
 
   const addDoctor = (newDoc) => {
     setDoctors((prev) => [newDoc, ...prev]);
@@ -20,5 +32,14 @@ export function useDoctors() {
     setDoctors((prev) => prev.filter((doc) => doc.id !== id));
   };
 
-  return { doctors, loading, addDoctor, deleteDoctor };
+  return {
+    doctors,
+    loading,
+    isOffline,
+    simulateError,
+    toggleSimulateError,
+    reload: loadData,
+    addDoctor,
+    deleteDoctor,
+  };
 }
