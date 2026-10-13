@@ -224,7 +224,7 @@ export default function HomePage() {
                 {/* მობილურზე ადაპტირებადი Flex განლაგება */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-4">
                   <div className="flex items-center gap-3.5">
-                    <figure className="m-0 relative flex-shrink-0">
+                    <figure className="m-0 relative shrink-0">
                       <div className="w-14 h-14 sm:w-16 sm:h-16 bg-slate-100 rounded-xl flex items-center justify-center text-2xl sm:text-3xl border border-slate-200">
                         {doc.avatar}
                       </div>
