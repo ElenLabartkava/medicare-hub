@@ -1,8 +1,18 @@
+import { useState } from "react";
 import CardTemp from "../components/common/CardTemp";
 import { useDoctors } from "../hooks/useServices";
 
 export default function HomePage() {
   const { doctors, loading } = useDoctors();
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // ექიმების გაფილტვრა სახელისა და სპეციალობის მიხედვით
+  const filteredDoctors = doctors.filter((doc) => {
+    const term = searchTerm.toLowerCase();
+    const nameMatch = doc.name?.toLowerCase().includes(term);
+    const specMatch = doc.spec?.toLowerCase().includes(term);
+    return nameMatch || specMatch;
+  });
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
@@ -26,7 +36,9 @@ export default function HomePage() {
           <input
             id="search-input"
             type="search"
-            placeholder="მოძებნეთ სპეციალობა..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="მოძებნეთ სპეციალობა ან ექიმი..."
             className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
           />
           <button
@@ -78,7 +90,8 @@ export default function HomePage() {
             </fieldset>
 
             <button
-              type="reset"
+              type="button"
+              onClick={() => setSearchTerm("")}
               className="w-full py-1.5 text-xs text-slate-600 border border-slate-300 rounded hover:bg-slate-50"
             >
               გასუფთავება
@@ -94,8 +107,10 @@ export default function HomePage() {
 
           {loading ? (
             <p className="text-slate-500">იტვირთება მონაცემები...</p>
+          ) : filteredDoctors.length === 0 ? (
+            <p className="text-slate-500 py-4">ექიმი ვერ მოიძებნა.</p>
           ) : (
-            doctors.map((doc) => (
+            filteredDoctors.map((doc) => (
               <CardTemp key={doc.id}>
                 <div className="flex items-center gap-4">
                   <figure className="m-0">
