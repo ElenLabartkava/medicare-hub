@@ -1,83 +1,128 @@
 import { useState } from "react";
 import HomePage from "./pages/HomePage";
-import AboutPage from "./pages/AboutPage";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState("home");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
-      {/* მთავარი ნავიგაცია და ჰედერი */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
+    <div className="min-h-screen bg-slate-50 flex flex-col text-slate-800">
+      {/* ჰედერი ჰამბურგერ მენიუთი */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <a
-            href="#home"
-            onClick={(e) => {
-              e.preventDefault();
-              setCurrentPage("home");
-            }}
-            className="text-2xl font-bold text-sky-600 hover:text-sky-700 transition"
-          >
-            MediCare Hub
-          </a>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-black text-sky-600 tracking-tight">
+              MediCare Hub
+            </span>
+          </div>
 
-          <nav aria-label="მთავარი ნავიგაცია">
-            <ul className="flex items-center gap-6 text-sm font-medium">
-              <li>
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage("home")}
-                  className={`transition ${currentPage === "home" ? "text-sky-600 font-semibold" : "text-slate-600 hover:text-slate-900"}`}
-                >
-                  მთავარი
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage("about")}
-                  className={`transition ${currentPage === "about" ? "text-sky-600 font-semibold" : "text-slate-600 hover:text-slate-900"}`}
-                >
-                  ჩვენ შესახებ
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700 transition shadow-sm"
-                >
-                  შესვლა
-                </button>
-              </li>
-            </ul>
+          {/* Desktop ნავიგაცია */}
+          <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-600">
+            <button
+              onClick={() => setCurrentPage("home")}
+              className={`hover:text-sky-600 transition ${
+                currentPage === "home" ? "text-sky-600" : ""
+              }`}
+            >
+              მთავარი
+            </button>
+            <button
+              onClick={() => setCurrentPage("about")}
+              className={`hover:text-sky-600 transition ${
+                currentPage === "about" ? "text-sky-600" : ""
+              }`}
+            >
+              ჩვენ შესახებ
+            </button>
+            <button className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg transition font-medium">
+              შესვლა
+            </button>
           </nav>
+
+          {/* Hamburger ღილაკი მობილურისთვის */}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition focus-visible:ring-2 focus-visible:ring-sky-500"
+            aria-label="მენიუს გახსნა"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              {isMobileMenuOpen ? (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              ) : (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              )}
+            </svg>
+          </button>
         </div>
+
+        {/* Mobile Dropdown მენიუ */}
+        {isMobileMenuOpen && (
+          <nav className="md:hidden border-t border-slate-200 bg-white px-4 py-3 space-y-2 shadow-lg animate-in slide-in-from-top duration-200">
+            <button
+              onClick={() => {
+                setCurrentPage("home");
+                setIsMobileMenuOpen(false);
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold hover:bg-slate-50 text-slate-700"
+            >
+              მთავარი
+            </button>
+            <button
+              onClick={() => {
+                setCurrentPage("about");
+                setIsMobileMenuOpen(false);
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold hover:bg-slate-50 text-slate-700"
+            >
+              ჩვენ შესახებ
+            </button>
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="w-full py-2 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-sky-700"
+            >
+              შესვლა
+            </button>
+          </nav>
+        )}
       </header>
 
-      {/* გვერდის გამოჩენა */}
+      {/* ძირითადი კონტენტი */}
       <div className="flex-1">
-        {currentPage === "home" ? <HomePage /> : <AboutPage />}
+        {currentPage === "home" ? (
+          <HomePage />
+        ) : (
+          <div className="max-w-4xl mx-auto py-16 px-4 text-center">
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">
+              ჩვენ შესახებ
+            </h2>
+            <p className="text-slate-600">
+              MediCare Hub – თქვენი სანდო სამედიცინო პარტნიორი.
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* საერთო ფუტერი */}
-      <footer className="bg-white border-t border-slate-200 py-8 mt-12 text-slate-600 text-sm">
+      {/* ფუტერი */}
+      <footer className="bg-white border-t border-slate-200 py-6 text-slate-500 text-xs">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <address className="not-italic text-xs text-slate-500">
-            <p>
-              კონტაქტი:{" "}
-              <a
-                href="mailto:info@medicarehub.ge"
-                className="hover:underline text-sky-600"
-              >
-                info@medicarehub.ge
-              </a>
-            </p>
-            <p>თბილისი, საქართველო</p>
-          </address>
-          <p className="text-xs text-slate-500">
-            &copy; <time dateTime="2026">2026</time> MediCare Hub. ყველა უფლება
-            დაცულია.
-          </p>
+          <p>© 2026 MediCare Hub. ყველა უფლება დაცულია.</p>
+          <p>თბილისი, საქართველო | info@medicarehub.ge</p>
         </div>
       </footer>
     </div>
