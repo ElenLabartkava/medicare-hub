@@ -1,6 +1,9 @@
-import { doctors } from "../data/doctors";
+import CardTemp from "../components/common/CardTemp";
+import { useDoctors } from "../hooks/useServices";
 
 export default function HomePage() {
+  const { doctors, loading } = useDoctors();
+
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
       {/* Hero სექცია */}
@@ -89,47 +92,48 @@ export default function HomePage() {
             ხელმისაწვდომი ექიმები
           </h2>
 
-          {doctors.map((doc) => (
-            <article
-              key={doc.id}
-              className="bg-white p-5 border border-slate-200 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4"
-            >
-              <div className="flex items-center gap-4">
-                <figure className="m-0">
-                  <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center text-3xl border border-slate-200">
-                    {doc.avatar}
+          {loading ? (
+            <p className="text-slate-500">იტვირთება მონაცემები...</p>
+          ) : (
+            doctors.map((doc) => (
+              <CardTemp key={doc.id}>
+                <div className="flex items-center gap-4">
+                  <figure className="m-0">
+                    <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center text-3xl border border-slate-200">
+                      {doc.avatar}
+                    </div>
+                    <figcaption className="sr-only">
+                      {doc.name} {doc.spec}
+                    </figcaption>
+                  </figure>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      {doc.name}
+                    </h3>
+                    <p className="text-sm text-slate-600">
+                      {doc.spec} {doc.experience}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      უახლოესი თავისუფალი დრო:{" "}
+                      <time dateTime={doc.nextSlot}>{doc.formattedDate}</time>
+                    </p>
                   </div>
-                  <figcaption className="sr-only">
-                    {doc.name} - {doc.spec}
-                  </figcaption>
-                </figure>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">
-                    {doc.name}
-                  </h3>
-                  <p className="text-sm text-slate-600">
-                    {doc.spec} • {doc.experience}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    უახლოესი თავისუფალი დრო:{" "}
-                    <time dateTime={doc.nextSlot}>{doc.formattedDate}</time>
-                  </p>
                 </div>
-              </div>
 
-              <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-2">
-                <span className="text-sm font-bold text-slate-900">
-                  {doc.price}
-                </span>
-                <button
-                  type="button"
-                  className="px-4 py-2 bg-sky-600 text-white text-xs font-semibold rounded-lg hover:bg-sky-700"
-                >
-                  ვიზიტის დაჯავშნა
-                </button>
-              </div>
-            </article>
-          ))}
+                <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-2">
+                  <span className="text-sm font-bold text-slate-900">
+                    {doc.price}
+                  </span>
+                  <button
+                    type="button"
+                    className="px-4 py-2 bg-sky-600 text-white text-xs font-semibold rounded-lg hover:bg-sky-700"
+                  >
+                    ვიზიტის დაჯავშნა
+                  </button>
+                </div>
+              </CardTemp>
+            ))
+          )}
         </section>
       </div>
     </main>
