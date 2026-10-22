@@ -1,6 +1,8 @@
-import { useState } from "react";
-import HomePage from "./pages/HomePage";
+import { useState, lazy, Suspense } from "react";
 import ErrorBoundary from "./components/common/ErrorBoundary";
+
+// Lazy Loading & Code Splitting: გვერდის დინამიური ჩატვირთვა Bundle-ის შესამცირებლად
+const HomePage = lazy(() => import("./pages/HomePage"));
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState("home");
@@ -99,21 +101,29 @@ export default function App() {
         )}
       </header>
 
-      {/* Error Boundary-ით შეფუთული მთავარი შინაარსი */}
+      {/* Error Boundary & Suspense-ით შეფუთული შინაარსი */}
       <div className="flex-1">
         <ErrorBoundary>
-          {currentPage === "home" ? (
-            <HomePage />
-          ) : (
-            <div className="max-w-4xl mx-auto py-16 px-4 text-center">
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">
-                ჩვენ შესახებ
-              </h2>
-              <p className="text-slate-600">
-                MediCare Hub – თქვენი სანდო სამედიცინო პარტნიორი.
-              </p>
-            </div>
-          )}
+          <Suspense
+            fallback={
+              <div className="flex justify-center items-center py-20 text-slate-500 text-sm">
+                იტვირთება გვერდი...
+              </div>
+            }
+          >
+            {currentPage === "home" ? (
+              <HomePage />
+            ) : (
+              <div className="max-w-4xl mx-auto py-16 px-4 text-center">
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                  ჩვენ შესახებ
+                </h2>
+                <p className="text-slate-600">
+                  MediCare Hub – თქვენი სანდო სამედიცინო პარტნიორი.
+                </p>
+              </div>
+            )}
+          </Suspense>
         </ErrorBoundary>
       </div>
 
