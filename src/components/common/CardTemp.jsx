@@ -1,4 +1,6 @@
-export default function CardTemp({ children, className = "" }) {
+import { memo } from "react";
+
+function CardTemp({ children, className = "" }) {
   return (
     <article
       tabIndex={0}
@@ -8,3 +10,5 @@ export default function CardTemp({ children, className = "" }) {
     </article>
   );
 }
+
+export default memo(CardTemp);
