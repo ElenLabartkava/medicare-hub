@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import CardTemp from "../components/common/CardTemp";
 import Modal from "../components/common/Modal";
 import DoctorForm from "../components/DoctorForm";
@@ -39,43 +39,52 @@ export default function HomePage() {
     return () => clearTimeout(handler);
   }, [searchTerm]);
 
-  const filteredDoctors = doctors.filter((doc) => {
+  // 1. ოპტიმიზაცია: useMemo ფილტრაციის მძიმე გამოთვლებისთვის
+  const filteredDoctors = useMemo(() => {
     const term = debouncedTerm.toLowerCase();
-    const nameMatch = doc.name?.toLowerCase().includes(term);
-    const specMatch = doc.spec?.toLowerCase().includes(term);
-    return nameMatch || specMatch;
-  });
+    return doctors.filter((doc) => {
+      const nameMatch = doc.name?.toLowerCase().includes(term);
+      const specMatch = doc.spec?.toLowerCase().includes(term);
+      return nameMatch || specMatch;
+    });
+  }, [doctors, debouncedTerm]);
 
-  // დაჯავშნის დამმუშავებელი Double-Click-ისგან დაცვით
-  const handleBook = (doctor) => {
-    if (bookingInProgressId) return; // თუ პროცესშია, მეორე კლიკი იგნორირდება
+  // 2. ოპტიმიზაცია: useCallback დაჯავშნის ლოგიკისთვის (ხელახალი რენდერების ასარიდებლად)
+  const handleBook = useCallback(
+    (doctor) => {
+      if (bookingInProgressId) return;
 
-    setBookingInProgressId(doctor.id);
+      setBookingInProgressId(doctor.id);
 
-    // ასინქრონული მოთხოვნის სიმულაცია
-    setTimeout(() => {
-      setBookedDoctor(doctor);
-      setBookingInProgressId(null);
-    }, 700);
-  };
+      setTimeout(() => {
+        setBookedDoctor(doctor);
+        setBookingInProgressId(null);
+      }, 700);
+    },
+    [bookingInProgressId],
+  );
 
-  const handleListClick = (event) => {
-    const deleteBtn = event.target.closest("button[data-action='delete']");
-    if (deleteBtn) {
-      const docId = Number(deleteBtn.dataset.id);
-      deleteDoctor(docId);
-      return;
-    }
-
-    const bookBtn = event.target.closest("button[data-action='book']");
-    if (bookBtn) {
-      const docId = Number(bookBtn.dataset.id);
-      const targetDoc = doctors.find((d) => d.id === docId);
-      if (targetDoc) {
-        handleBook(targetDoc);
+  // 3. ოპტიმიზაცია: useCallback სიის კლიკების დამმუშავებლისთვის
+  const handleListClick = useCallback(
+    (event) => {
+      const deleteBtn = event.target.closest("button[data-action='delete']");
+      if (deleteBtn) {
+        const docId = Number(deleteBtn.dataset.id);
+        deleteDoctor(docId);
+        return;
       }
-    }
-  };
+
+      const bookBtn = event.target.closest("button[data-action='book']");
+      if (bookBtn) {
+        const docId = Number(bookBtn.dataset.id);
+        const targetDoc = doctors.find((d) => d.id === docId);
+        if (targetDoc) {
+          handleBook(targetDoc);
+        }
+      }
+    },
+    [deleteDoctor, doctors, handleBook],
+  );
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-6 sm:py-8">
@@ -108,7 +117,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 3. ოფლაინ / API Mock Fallback ინდიკატორი და კლინიკის ბანერი */}
+      {/* ოფლაინ / API Mock Fallback ინდიკატორი და კლინიკის ბანერი */}
       {isOffline && (
         <div
           role="alert"
@@ -347,7 +356,6 @@ export default function HomePage() {
                         {doc.price}
                       </span>
                       <div className="flex gap-2">
-                        {/* 4. Double-Click დაცვა: disabled & loading რეჟიმი */}
                         <button
                           type="button"
                           data-action="book"
