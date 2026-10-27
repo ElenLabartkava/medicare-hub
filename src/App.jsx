@@ -1,11 +1,15 @@
 import { useState, lazy, Suspense } from "react";
 import ErrorBoundary from "./components/common/ErrorBoundary";
+import { useDoctorStore } from "./store/useDoctorStore";
 
 const HomePage = lazy(() => import("./pages/HomePage"));
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState("home"); // 'home' | 'about' | 'login'
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // გლობალური Store-დან ექიმების რაოდენობის წამოღება Header Counter-ისთვის
+  const doctorsCount = useDoctorStore((state) => state.doctors.length);
 
   // მომხმარებლის ავტორიზაციის State
   const [currentUser, setCurrentUser] = useState(null);
@@ -22,7 +26,6 @@ export default function App() {
     );
   }
 
-  // ავტორიზაციის ლოგიკა დინამიური სახელითა და როლით
   const handleLogin = (role) => {
     const defaultNames = {
       patient: "ელენე ლაბარტყავა",
@@ -52,22 +55,22 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 flex flex-col text-slate-800 font-sans">
       {/* მთავარი ნავიგაცია */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={() => setCurrentPage("home")}
               className="text-2xl font-black text-sky-600 tracking-tight flex items-center gap-1.5 focus:outline-none"
             >
               <span>🏥</span> MediCare Hub
             </button>
-            {currentUser && (
-              <span className="hidden sm:inline-block text-xs bg-sky-50 text-sky-700 border border-sky-200 px-3 py-1 rounded-full font-medium">
-                {currentUser.label}: <strong>{currentUser.name}</strong>
-              </span>
-            )}
+
+            {/* გლობალური მთვლელი Zustand Store-დან */}
+            <span className="hidden sm:inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full text-xs font-bold">
+              👨‍⚕️ აქტიური ექიმი: {doctorsCount}
+            </span>
           </div>
 
-          <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-600">
+          <nav className="hidden md:flex items-center gap-5 text-sm font-semibold text-slate-600">
             <button
               onClick={() => setCurrentPage("home")}
               className={`hover:text-sky-600 transition ${
@@ -90,14 +93,14 @@ export default function App() {
             </button>
 
             {currentUser ? (
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-slate-500 font-normal">
-                  {currentUser.label}
+              <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
+                <span className="text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-medium">
+                  👤 {currentUser.name}
                 </span>
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="px-3.5 py-1.5 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-semibold transition"
+                  className="px-3 py-1.5 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-semibold transition"
                 >
                   გამოსვლა
                 </button>
@@ -147,6 +150,9 @@ export default function App() {
         {/* მობილური მენიუ */}
         {isMobileMenuOpen && (
           <nav className="md:hidden border-t border-slate-200 bg-white px-4 py-3 space-y-2 shadow-lg">
+            <div className="px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 rounded-lg">
+              👨‍⚕️ აქტიური ექიმი: {doctorsCount}
+            </div>
             <button
               onClick={() => {
                 setCurrentPage("home");
@@ -214,7 +220,6 @@ export default function App() {
                     </p>
                   </div>
 
-                  {/* ინდივიდუალური სახელის შეყვანის ველი */}
                   <div className="mb-5 text-left">
                     <label className="block text-xs font-bold text-slate-700 mb-1.5">
                       თქვენი სახელი და გვარი:
@@ -226,9 +231,6 @@ export default function App() {
                       onChange={(e) => setCustomNameInput(e.target.value)}
                       className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white"
                     />
-                    <span className="text-[11px] text-slate-400 mt-1 block">
-                      * თუ ცარიელს დატოვებთ, ჩაჯდება ნაგულისხმევი სახელი.
-                    </span>
                   </div>
 
                   <div className="space-y-3">
@@ -242,7 +244,7 @@ export default function App() {
                           🧑‍💼 პაციენტის სივრცე
                         </div>
                         <div className="text-xs text-slate-500">
-                          ექიმების მოძიება, ფილტრაცია და ვიზიტის დაჯავშნა
+                          ექიმების მოძიება და ვიზიტის დაჯავშნა
                         </div>
                       </div>
                       <span className="text-slate-400 group-hover:text-sky-600 font-bold">
@@ -260,7 +262,7 @@ export default function App() {
                           👨‍⚕️ ექიმის სამუშაო კაბინეტი
                         </div>
                         <div className="text-xs text-slate-500">
-                          სამუშაო განრიგი და ჩაწერილი პაციენტების სია
+                          სამუშაო განრიგი და ჩაწერილი პაციენტები
                         </div>
                       </div>
                       <span className="text-slate-400 group-hover:text-sky-600 font-bold">
@@ -278,7 +280,7 @@ export default function App() {
                           ⚙️ ადმინისტრატორის პანელი
                         </div>
                         <div className="text-xs text-slate-500">
-                          პერსონალის მართვა და ახალი ექიმის დამატება
+                          პერსონალის მართვა და ექიმის დამატება
                         </div>
                       </div>
                       <span className="text-slate-400 group-hover:text-sky-600 font-bold">
@@ -298,7 +300,7 @@ export default function App() {
               </div>
             )}
 
-            {/* 2. მთავარი გვერდი: სტუმრის ვიტრინა (Landing) VS ავტორიზებული პორტალი */}
+            {/* 2. მთავარი გვერდი */}
             {currentPage === "home" &&
               (currentUser ? (
                 <HomePage
@@ -337,39 +339,6 @@ export default function App() {
                       </button>
                     </div>
                   </section>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                      <div className="text-3xl mb-3">⚡</div>
-                      <h3 className="font-bold text-slate-900 text-base mb-1">
-                        სწრაფი ონლაინ ჯავშანი
-                      </h3>
-                      <p className="text-xs text-slate-500">
-                        დაემშვიდობეთ რიგებსა და სატელეფონო ლოდინს. აირჩიეთ
-                        სასურველი საათი ერთი კლიკით.
-                      </p>
-                    </div>
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                      <div className="text-3xl mb-3">🩺</div>
-                      <h3 className="font-bold text-slate-900 text-base mb-1">
-                        ვერიფიცირებული ექიმები
-                      </h3>
-                      <p className="text-xs text-slate-500">
-                        მხოლოდ სერტიფიცირებული, მრავალწლიანი გამოცდილების მქონე
-                        წამყვანი სპეციალისტები.
-                      </p>
-                    </div>
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                      <div className="text-3xl mb-3">🛡️</div>
-                      <h3 className="font-bold text-slate-900 text-base mb-1">
-                        დაცული სამედიცინო პროფილი
-                      </h3>
-                      <p className="text-xs text-slate-500">
-                        თქვენი პირადი მონაცემები და ჯავშნის ისტორია სრულად
-                        დაცულია პლატფორმის მიერ.
-                      </p>
-                    </div>
-                  </div>
                 </div>
               ))}
 
@@ -382,49 +351,8 @@ export default function App() {
                   </h1>
                   <p className="text-slate-600 text-sm sm:text-base">
                     MediCare Hub აერთიანებს წამყვან ქართველ სპეციალისტებს ერთიან
-                    ციფრულ სივრცეში, რათა სამედიცინო მომსახურება იყოს
-                    ხელმისაწვდომი, სწრაფი და გამჭვირვალე.
+                    ციფრულ სივრცეში.
                   </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                  <div className="bg-white p-6 rounded-2xl border border-slate-200 text-center shadow-sm">
-                    <div className="text-3xl mb-2">⭐</div>
-                    <div className="text-2xl font-black text-sky-600 mb-1">
-                      98.4%
-                    </div>
-                    <h3 className="font-bold text-slate-800 text-sm mb-1">
-                      კმაყოფილი პაციენტი
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      ათასობით წარმატებით დასრულებული ვიზიტი და კონსულტაცია.
-                    </p>
-                  </div>
-                  <div className="bg-white p-6 rounded-2xl border border-slate-200 text-center shadow-sm">
-                    <div className="text-3xl mb-2">👨‍⚕️</div>
-                    <div className="text-2xl font-black text-sky-600 mb-1">
-                      40+
-                    </div>
-                    <h3 className="font-bold text-slate-800 text-sm mb-1">
-                      სერტიფიცირებული ექიმი
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      მრავალწლიანი კლინიკური გამოცდილების მქონე სპეციალისტები.
-                    </p>
-                  </div>
-                  <div className="bg-white p-6 rounded-2xl border border-slate-200 text-center shadow-sm">
-                    <div className="text-3xl mb-2">⚡</div>
-                    <div className="text-2xl font-black text-sky-600 mb-1">
-                      24/7
-                    </div>
-                    <h3 className="font-bold text-slate-800 text-sm mb-1">
-                      ონლაინ მხარდაჭერა
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      ოპერატიული დახმარება და კონსულტაციის დაჯავშნა ნებისმიერ
-                      დროს.
-                    </p>
-                  </div>
                 </div>
               </div>
             )}
@@ -432,18 +360,18 @@ export default function App() {
         </ErrorBoundary>
       </div>
 
-      {/* სისტემური დიაგნოსტიკის პანელი (ლექტორის ტესტებისთვის) */}
+      {/* სისტემური დიაგნოსტიკის პანელი */}
       <aside className="fixed bottom-4 right-4 z-50">
         <button
           type="button"
           onClick={() => setShowDevPanel(!showDevPanel)}
           className="bg-slate-900 text-white text-xs font-bold px-3.5 py-2 rounded-full shadow-xl hover:bg-slate-800 transition flex items-center gap-2 border border-slate-700"
         >
-          <span>🛠️</span> სისტემური დიაგნოსტიკა {showDevPanel ? "▼" : "▲"}
+          <span>🛠️</span> დიაგნოსტიკა {showDevPanel ? "▼" : "▲"}
         </button>
 
         {showDevPanel && (
-          <div className="mt-2 p-3 bg-white border border-slate-300 rounded-xl shadow-2xl flex flex-col gap-2 text-xs w-64 animate-fade-in">
+          <div className="mt-2 p-3 bg-white border border-slate-300 rounded-xl shadow-2xl flex flex-col gap-2 text-xs w-64">
             <span className="font-bold text-slate-700 border-b pb-1">
               ტესტირების რეჟიმები:
             </span>
@@ -471,11 +399,8 @@ export default function App() {
         )}
       </aside>
 
-      <footer className="bg-white border-t border-slate-200 py-6 text-slate-500 text-xs">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© 2026 MediCare Hub. ყველა უფლება დაცულია.</p>
-          <p>თბილისი, საქართველო | ცხელი ხაზი: 032 2 00 00 00</p>
-        </div>
+      <footer className="bg-white border-t border-slate-200 py-6 text-slate-500 text-xs text-center">
+        <p>© 2026 MediCare Hub. ყველა უფლება დაცულია.</p>
       </footer>
     </div>
   );

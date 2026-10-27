@@ -1,493 +1,350 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import CardTemp from "../components/common/CardTemp";
 import Modal from "../components/common/Modal";
 import DoctorForm from "../components/DoctorForm";
-import { useDoctors } from "../hooks/useServices";
+import { useDoctorStore } from "../store/useDoctorStore";
 
 export default function HomePage({
   currentRole = "patient",
   currentUser = null,
   simulateError = false,
 }) {
-  const {
-    doctors,
-    bookings,
-    addBooking,
-    loading,
-    isOffline: hookOffline,
-    addDoctor,
-    deleteDoctor,
-  } = useDoctors();
+  const doctors = useDoctorStore((state) => state.doctors);
+  const bookings = useDoctorStore((state) => state.bookings);
+  const addBooking = useDoctorStore((state) => state.addBooking);
+  const addDoctor = useDoctorStore((state) => state.addDoctor);
+  const deleteDoctor = useDoctorStore((state) => state.deleteDoctor);
 
-  const isOffline = hookOffline || simulateError;
+  const isOffline = simulateError;
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedTerm, setDebouncedTerm] = useState("");
   const [selectedSpecialty, setSelectedSpecialty] = useState("all");
 
-  // მოდალები
   const [isDoctorModalOpen, setIsDoctorModalOpen] = useState(false);
-  const [bookingDoctor, setBookingDoctor] = useState(null); // ექიმი, რომელსაც ვჯავშნით
+  const [bookingDoctor, setBookingDoctor] = useState(null);
   const [selectedDate, setSelectedDate] = useState("2026-10-28");
   const [selectedSlot, setSelectedSlot] = useState("");
   const [bookingSuccessMsg, setBookingSuccessMsg] = useState(null);
+  const [bookingInProgressId, setBookingInProgressId] = useState(null);
 
-  // მობილური ფილტრი
-  const [showFiltersMobile, setShowFiltersMobile] = useState(false);
+  const specialties = [
+    { id: "all", name: "ყველა სპეციალობა", icon: "🩺" },
+    { id: "cardiology", name: "კარდიოლოგია", icon: "❤️" },
+    { id: "pediatrics", name: "პედიატრია", icon: "👶" },
+    { id: "neurology", name: "ნევროლოგია", icon: "🧠" },
+    { id: "endocrinology", name: "ენდოკრინოლოგია", icon: "🧬" },
+    { id: "traumatology", name: "ტრავმატოლოგია", icon: "🦴" },
+    { id: "dermatology", name: "დერმატოლოგია", icon: "🔬" },
+  ];
 
-  // Debounce ძიებაზე
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedTerm(searchTerm);
-    }, 350);
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
-
-  // useMemo ფილტრაცია
   const filteredDoctors = useMemo(() => {
-    const term = debouncedTerm.toLowerCase();
     return doctors.filter((doc) => {
-      const nameMatch = doc.name?.toLowerCase().includes(term);
-      const specMatch = doc.spec?.toLowerCase().includes(term);
-      const categoryMatch =
-        selectedSpecialty === "all" ||
-        doc.category === selectedSpecialty ||
-        doc.spec?.toLowerCase().includes(selectedSpecialty.toLowerCase());
-
-      return (nameMatch || specMatch) && categoryMatch;
+      const matchesSearch =
+        doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.spec.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSpecialty =
+        selectedSpecialty === "all" || doc.category === selectedSpecialty;
+      return matchesSearch && matchesSpecialty;
     });
-  }, [doctors, debouncedTerm, selectedSpecialty]);
+  }, [doctors, searchTerm, selectedSpecialty]);
 
-  // ჯავშნის ფანჯრის გახსნა
-  const openBookingModal = useCallback((doctor) => {
-    setBookingDoctor(doctor);
-    setSelectedSlot(doctor.availableSlots?.[0] || "11:00");
-  }, []);
+  const handleConfirmBooking = useCallback(() => {
+    if (!selectedSlot || !bookingDoctor) return;
 
-  // ჯავშნის დადასტურება
-  const confirmBooking = (e) => {
-    e.preventDefault();
-    if (!bookingDoctor || !selectedSlot) return;
+    setBookingInProgressId(bookingDoctor.id);
 
-    addBooking({
-      doctorId: bookingDoctor.id,
-      doctorName: bookingDoctor.name,
-      patientName: currentUser?.name || "გიორგი ნადარეიშვილი",
-      date: selectedDate,
-      time: selectedSlot,
-      type: "ონლაინ ჯავშანი",
-    });
+    setTimeout(() => {
+      addBooking({
+        doctorId: bookingDoctor.id,
+        doctorName: bookingDoctor.name,
+        doctorSpec: bookingDoctor.spec,
+        patientName: currentUser ? currentUser.name : "სტუმარი პაციენტი",
+        date: selectedDate,
+        time: selectedSlot,
+      });
 
-    setBookingSuccessMsg(
-      `ვიზიტი წარმატებით დაიჯავშნა ექიმთან: ${bookingDoctor.name} (${selectedDate}, ${selectedSlot})`,
+      setBookingSuccessMsg(
+        `ვიზიტი წარმატებით დაიჯავშნა: ${bookingDoctor.name} (${selectedDate} - ${selectedSlot})`,
+      );
+      setBookingInProgressId(null);
+      setBookingDoctor(null);
+      setSelectedSlot("");
+    }, 400);
+  }, [bookingDoctor, selectedDate, selectedSlot, currentUser, addBooking]);
+
+  const handleOpenBooking = (doc) => {
+    setBookingDoctor(doc);
+    setSelectedSlot(
+      doc.availableSlots && doc.availableSlots.length > 0
+        ? doc.availableSlots[0]
+        : "10:00",
     );
-    setBookingDoctor(null);
+    setBookingSuccessMsg(null);
   };
 
-  // ექიმის როლისთვის განრიგის გაფილტვრა
-  const doctorBookings = useMemo(() => {
-    return bookings;
-  }, [bookings]);
-
   return (
-    <main className="max-w-6xl mx-auto px-4 py-6 sm:py-8 font-sans">
-      {/* ოფლაინ შეტყობინება */}
-      {isOffline && (
-        <div
-          role="alert"
-          className="mb-6 p-4 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 flex items-center justify-between text-sm shadow-sm"
-        >
-          <div className="flex items-center gap-3">
-            <span className="text-xl">⚠️</span>
-            <div>
-              <strong>ნაჩვენებია ლოკალური ქეშირებული მონაცემები.</strong>{" "}
-              სერვერთან კავშირი შეფერხებულია.
-            </div>
-          </div>
-          <span className="text-xs font-semibold uppercase bg-amber-200 text-amber-900 px-2.5 py-1 rounded">
-            Offline Mode
-          </span>
-        </div>
-      )}
-
-      {/* ჯავშნის წარმატების შეტყობინება */}
+    <main className="max-w-6xl mx-auto px-4 py-8">
       {bookingSuccessMsg && (
-        <div
-          role="status"
-          className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 flex items-center justify-between text-sm shadow-sm animate-fade-in"
-        >
-          <span>
-            ✅ <strong>{bookingSuccessMsg}</strong>
-          </span>
+        <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">✅</span>
+            <span className="text-sm font-semibold">{bookingSuccessMsg}</span>
+          </div>
           <button
-            type="button"
             onClick={() => setBookingSuccessMsg(null)}
-            className="text-xs bg-white border border-emerald-300 px-3 py-1 rounded-md hover:bg-emerald-100 font-semibold"
+            className="text-emerald-600 hover:text-emerald-900 font-bold text-sm"
           >
-            დახურვა
+            ✕
           </button>
         </div>
       )}
 
-      {/* 1. ადმინისტრატორის მართვის პანელი */}
-      {currentRole === "admin" && (
-        <div className="mb-8 p-6 bg-slate-900 text-white rounded-2xl shadow-lg border border-slate-800">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <span className="text-xs uppercase tracking-widest text-sky-400 font-bold">
-                მართვის პანელი
-              </span>
-              <h2 className="text-xl font-bold mt-1">
-                კლინიკის ადმინისტრირება და ექიმები
-              </h2>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsDoctorModalOpen(true)}
-              className="py-2.5 px-4 bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-xl text-sm transition shadow-sm flex items-center gap-2"
-            >
-              <span>+</span> ახალი ექიმის დამატება
-            </button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 pt-4 border-t border-slate-800 text-xs text-slate-300">
-            <div>
-              აქტიური ექიმები:{" "}
-              <strong className="text-white text-sm ml-1">
-                {doctors.length}
-              </strong>
-            </div>
-            <div>
-              სულ ჯავშნები:{" "}
-              <strong className="text-white text-sm ml-1">
-                {bookings.length}
-              </strong>
-            </div>
-            <div>
-              სისტემის სტატუსი:{" "}
-              <strong className="text-emerald-400 text-sm ml-1">აქტიური</strong>
-            </div>
-            <div>
-              მონაცემთა ბაზა:{" "}
-              <strong className="text-sky-400 text-sm ml-1">
-                LocalStorage Sync
-              </strong>
-            </div>
-          </div>
+      {isOffline && (
+        <div className="mb-6 p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs font-semibold flex items-center gap-2">
+          <span>⚠️</span> სერვერთან კავშირი შეზღუდულია — აქტიურია ადგილობრივი
+          Mock მონაცემები.
         </div>
       )}
 
-      {/* 2. ექიმის სამუშაო კაბინეტი (დინამიური ჯავშნებით) */}
-      {currentRole === "doctor" && (
-        <div className="mb-8 p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-            <div>
-              <span className="text-xs font-bold text-sky-600 uppercase tracking-wider">
-                ექიმის სამუშაო სივრცე
-              </span>
-              <h2 className="text-lg font-bold text-slate-900">
-                დღევანდელი ვიზიტების განრიგი ({doctorBookings.length} ჩანაწერი)
-              </h2>
-            </div>
-            <span className="bg-emerald-50 text-emerald-700 text-xs px-3 py-1 rounded-full font-semibold border border-emerald-200">
-              კაბინეტი: #304
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            {doctorBookings.map((b) => (
-              <div
-                key={b.id}
-                className="p-4 bg-slate-50 hover:bg-sky-50/50 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-slate-200/80 transition"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-black text-sky-700 bg-sky-100 px-2 py-0.5 rounded">
-                      ⏰ {b.time}
-                    </span>
-                    <strong className="text-slate-800 text-base">
-                      {b.patientName}
-                    </strong>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">
-                    თარიღი: {b.date} • ექიმი: {b.doctorName} • ტიპი: {b.type}
-                  </p>
-                </div>
-                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 w-fit">
-                  {b.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* საძიებო Hero ბლოკი */}
-      <section className="text-center py-6 sm:py-8 max-w-2xl mx-auto">
-        <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 mb-2 tracking-tight">
-          იპოვე შენი პირადი ექიმი და დაჯავშნე ვიზიტი
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-600 mb-5">
-          აირჩიე სპეციალისტი, ნახე თავისუფალი საათები და ჩაეწერე მარტივად.
-        </p>
-
-        <form
-          role="search"
-          className="flex flex-col sm:flex-row gap-2 max-w-md mx-auto"
-          onSubmit={(e) => e.preventDefault()}
-        >
+      <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between mb-8 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="relative flex-1">
           <input
-            type="search"
+            type="text"
+            placeholder="მოძებნეთ ექიმი ან სპეციალობა..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="მოძებნეთ სპეციალობა ან ექიმის სახელი..."
-            className="flex-1 px-4 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white shadow-sm"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
           />
-          <button
-            type="submit"
-            className="px-6 py-2.5 bg-sky-600 text-white rounded-lg text-sm font-semibold hover:bg-sky-700 transition shadow-sm"
-          >
-            ძებნა
-          </button>
-        </form>
-      </section>
+          <span className="absolute left-3.5 top-3 text-slate-400">🔍</span>
+        </div>
 
-      {/* ძირითადი ბადე: ფილტრები და ექიმები */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start mt-4">
-        {/* მარცხენა ფილტრი */}
-        <aside className="bg-white p-5 border border-slate-200 rounded-xl shadow-sm">
+        <div className="flex items-center gap-3">
+          <select
+            value={selectedSpecialty}
+            onChange={(e) => setSelectedSpecialty(e.target.value)}
+            className="py-2.5 px-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          >
+            {specialties.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.icon} {s.name}
+              </option>
+            ))}
+          </select>
+
           {currentRole === "admin" && (
             <button
-              type="button"
               onClick={() => setIsDoctorModalOpen(true)}
-              className="w-full mb-4 py-2.5 px-4 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg shadow-sm transition text-sm flex items-center justify-center gap-1.5"
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm transition flex items-center gap-2 shrink-0"
             >
-              <span>+</span> ექიმის დამატება
+              <span>➕</span> ახალი ექიმი
             </button>
           )}
+        </div>
+      </div>
 
-          <div className="lg:hidden">
-            <button
-              type="button"
-              onClick={() => setShowFiltersMobile(!showFiltersMobile)}
-              className="w-full flex items-center justify-between py-2 text-sm font-bold text-slate-800 border-t pt-3"
-            >
-              <span>მიმართულებები {showFiltersMobile ? "▲" : "▼"}</span>
-            </button>
-          </div>
-
-          <div
-            className={`${showFiltersMobile ? "block" : "hidden"} lg:block space-y-3 pt-1`}
-          >
-            <h2 className="hidden lg:block font-bold text-slate-900 mb-2 uppercase tracking-wider text-xs">
-              სამედიცინო მიმართულებები
-            </h2>
-            <div className="space-y-1.5 text-sm">
-              {[
-                { id: "all", label: "ყველა მიმართულება" },
-                { id: "cardiology", label: "კარდიოლოგია" },
-                { id: "pediatrics", label: "პედიატრია" },
-                { id: "neurology", label: "ნევროლოგია" },
-                { id: "endocrinology", label: "ენდოკრინოლოგია" },
-                { id: "traumatology", label: "ტრავმატოლოგია" },
-                { id: "dermatology", label: "დერმატოლოგია" },
-              ].map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setSelectedSpecialty(cat.id)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition ${
-                    selectedSpecialty === cat.id
-                      ? "bg-sky-600 text-white shadow-sm"
-                      : "text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                setSearchTerm("");
-                setSelectedSpecialty("all");
-              }}
-              className="w-full mt-4 py-2 text-xs font-semibold text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 transition"
-            >
-              ფილტრების გასუფთავება
-            </button>
-          </div>
-        </aside>
-
-        {/* ექიმების სია */}
-        <section className="lg:col-span-3 space-y-4">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-bold text-slate-900">
-              ხელმისაწვდომი სპეციალისტები ({filteredDoctors.length})
-            </h2>
-          </div>
-
-          {loading ? (
-            <p className="text-slate-500 text-sm py-4">იტვირთება...</p>
-          ) : filteredDoctors.length === 0 ? (
-            <p className="text-slate-500 py-8 text-center bg-white rounded-xl border border-dashed border-slate-200">
-              სპეციალისტი ვერ მოიძებნა.
+      {currentRole === "doctor" && (
+        <section className="mb-10 bg-sky-50/60 border border-sky-200 rounded-2xl p-6">
+          <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <span>📅</span> ჩემი სამუშაო განრიგი და ჩაწერილი პაციენტები
+          </h2>
+          {bookings.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              ამ ეტაპზე დაჯავშნილი ვიზიტები არ გაქვთ.
             </p>
           ) : (
-            filteredDoctors.map((doc) => (
-              <CardTemp key={doc.id}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-slate-100 rounded-xl flex items-center justify-center text-3xl border border-slate-200 shrink-0">
-                      {doc.avatar}
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900">
-                        {doc.name}
-                      </h3>
-                      <p className="text-xs text-sky-700 font-medium">
-                        {doc.spec} • {doc.experience}
-                      </p>
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        <span className="text-[11px] text-slate-500 mr-1">
-                          თავისუფალი საათები:
-                        </span>
-                        {doc.availableSlots?.map((slot) => (
-                          <span
-                            key={slot}
-                            className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-mono font-bold"
-                          >
-                            {slot}
-                          </span>
-                        ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {bookings.map((b) => (
+                <div
+                  key={b.id}
+                  className="bg-white p-4 rounded-xl border border-sky-100 shadow-sm text-sm"
+                >
+                  <div className="font-bold text-slate-800">
+                    {b.patientName}
+                  </div>
+                  <div className="text-xs text-sky-600 mt-0.5">
+                    {b.doctorSpec} — {b.doctorName}
+                  </div>
+                  <div className="mt-2 text-xs text-slate-500 flex justify-between items-center border-t border-slate-100 pt-2">
+                    <span>🗓️ {b.date}</span>
+                    <span className="font-bold text-slate-700">
+                      ⏰ {b.time}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-slate-900">
+            ექიმების სია ({filteredDoctors.length})
+          </h2>
+        </div>
+
+        {filteredDoctors.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
+            <span className="text-3xl block mb-2">🔍</span>
+            <p className="text-slate-600 font-semibold text-sm">
+              ექიმი მითითებული პარამეტრებით ვერ მოიძებნა
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredDoctors.map((doc) => (
+              <div key={doc.id} className="relative">
+                <CardTemp className="flex-col! items-stretch">
+                  <div className="flex items-start justify-between w-full gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-sky-100 rounded-full flex items-center justify-center text-2xl shrink-0">
+                        {doc.avatar || "👨‍⚕️"}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 leading-snug">
+                          {doc.name}
+                        </h3>
+                        <p className="text-xs font-semibold text-sky-600">
+                          {doc.spec}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {doc.experience}
+                        </p>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 pt-3 sm:pt-0 gap-2 shrink-0">
-                    <span className="text-base font-black text-slate-900">
-                      {doc.price}
-                    </span>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openBookingModal(doc)}
-                        className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-lg shadow-sm transition flex items-center gap-1.5"
-                      >
-                        📅 დროის არჩევა და ჯავშანი
-                      </button>
-
+                    {/* ფასი და ადმინის წაშლის ღილაკი გვერდიგვერდ */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-xs font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg">
+                        {doc.price}
+                      </span>
                       {currentRole === "admin" && (
                         <button
                           type="button"
                           onClick={() => deleteDoctor(doc.id)}
-                          className="px-2.5 py-2 border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold rounded-lg transition"
-                          title="წაშლა"
+                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                          title="ექიმის წაშლა"
                         >
-                          წაშლა
+                          🗑️
                         </button>
                       )}
                     </div>
                   </div>
-                </div>
-              </CardTemp>
-            ))
-          )}
-        </section>
-      </div>
 
-      {/* 📅 ინტერაქციული ჯავშნისა და კალენდრის მოდალი */}
+                  <div className="w-full mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                      <span>ხელმისაწვდომია</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenBooking(doc)}
+                      disabled={bookingInProgressId === doc.id}
+                      className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition shadow-sm"
+                    >
+                      {bookingInProgressId === doc.id
+                        ? "მუშავდება..."
+                        : "დაჯავშნა"}
+                    </button>
+                  </div>
+                </CardTemp>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       {bookingDoctor && (
         <Modal
-          isOpen={Boolean(bookingDoctor)}
+          isOpen={!!bookingDoctor}
           onClose={() => setBookingDoctor(null)}
           title={`ვიზიტის დაჯავშნა: ${bookingDoctor.name}`}
         >
-          <form onSubmit={confirmBooking} className="space-y-4">
-            <div className="p-3 bg-sky-50 rounded-xl border border-sky-100 text-xs text-sky-900">
-              სპეციალობა: <strong>{bookingDoctor.spec}</strong> | ვიზიტის
-              ღირებულება: <strong>{bookingDoctor.price}</strong>
-            </div>
-
+          <div className="space-y-5 text-sm">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                აირჩიეთ ვიზიტის თარიღი:
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                აირჩიეთ თარიღი:
               </label>
               <input
                 type="date"
-                defaultValue="2026-10-28"
-                min="2026-10-28"
-                max="2026-11-15"
+                value={selectedDate}
+                min="2026-10-27"
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 bg-white"
-                required
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                აირჩიეთ თავისუფალი დრო (სლოტი):
+                თავისუფალი დროის სლოტები:
               </label>
               <div className="grid grid-cols-3 gap-2">
-                {bookingDoctor.availableSlots?.map((slot) => (
-                  <button
-                    key={slot}
-                    type="button"
-                    onClick={() => setSelectedSlot(slot)}
-                    className={`py-2 text-xs font-bold rounded-lg border transition ${
-                      selectedSlot === slot
-                        ? "bg-sky-600 text-white border-sky-600 shadow-sm"
-                        : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-                    }`}
-                  >
-                    ⏰ {slot}
-                  </button>
-                ))}
+                {bookingDoctor.availableSlots &&
+                bookingDoctor.availableSlots.length > 0 ? (
+                  bookingDoctor.availableSlots.map((slot) => (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => setSelectedSlot(slot)}
+                      className={`py-2 text-xs font-bold rounded-lg border transition ${
+                        selectedSlot === slot
+                          ? "bg-sky-600 text-white border-sky-600 shadow-sm"
+                          : "border-slate-200 hover:border-sky-300 bg-slate-50 text-slate-700"
+                      }`}
+                    >
+                      {slot}
+                    </button>
+                  ))
+                ) : (
+                  <span className="col-span-3 text-xs text-slate-400">
+                    სლოტები არ არის
+                  </span>
+                )}
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                პაციენტის სახელი და გვარი:
-              </label>
-              <input
-                type="text"
-                readOnly
-                value={currentUser?.name || "გიორგი ნადარეიშვილი"}
-                className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-xs text-slate-600 font-semibold"
-              />
-            </div>
-
-            <div className="flex gap-2 pt-2">
+            <div className="pt-3 border-t border-slate-100 flex gap-3">
+              <button
+                type="button"
+                onClick={handleConfirmBooking}
+                disabled={
+                  !selectedSlot || bookingInProgressId === bookingDoctor.id
+                }
+                className="flex-1 py-2.5 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white rounded-xl font-bold transition shadow-sm"
+              >
+                {bookingInProgressId === bookingDoctor.id
+                  ? "მუშავდება..."
+                  : "ჯავშნის დადასტურება"}
+              </button>
               <button
                 type="button"
                 onClick={() => setBookingDoctor(null)}
-                className="flex-1 py-2.5 border border-slate-300 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-50"
+                className="px-4 py-2.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl font-semibold transition"
               >
                 გაუქმება
               </button>
-              <button
-                type="submit"
-                className="flex-1 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shadow-md transition"
-              >
-                დაჯავშნის დადასტურება
-              </button>
             </div>
-          </form>
+          </div>
         </Modal>
       )}
 
-      {/* ახალი ექიმის დამატების მოდალი ადმინისთვის */}
-      <Modal
-        isOpen={isDoctorModalOpen}
-        onClose={() => setIsDoctorModalOpen(false)}
-        title="ახალი ექიმის დამატება"
-      >
-        <DoctorForm
-          onAddDoctor={addDoctor}
+      {isDoctorModalOpen && (
+        <Modal
+          isOpen={isDoctorModalOpen}
           onClose={() => setIsDoctorModalOpen(false)}
-        />
-      </Modal>
+          title="ახალი ექიმის რეგისტრაცია"
+        >
+          <DoctorForm
+            onAddDoctor={(newDoc) => {
+              addDoctor(newDoc);
+              setIsDoctorModalOpen(false);
+            }}
+            onCancel={() => setIsDoctorModalOpen(false)}
+          />
+        </Modal>
+      )}
     </main>
   );
 }
