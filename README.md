@@ -1,6 +1,6 @@
 # 🚀 MediCare Hub — ონლაინ სამედიცინო სერვისებისა და ვიზიტების მართვის პლატფორმა
 
-**Live Demo:** [https://medicare-hub.vercel.app](https://medicare-hub.vercel.app) _(ან ეშვება ლოკალურად: http://localhost:5173)_  
+**Live Demo:** [https://medicare-hub-theta.vercel.app/](https://medicare-hub.vercel.app) _(ან ეშვება ლოკალურად: http://localhost:5173)_  
 **კატეგორია:** სამედიცინო ჰაბი / HealthTech პლატფორმა
 
 ---
