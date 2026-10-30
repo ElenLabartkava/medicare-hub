@@ -64,7 +64,7 @@ export default function HomePage({
       });
 
       setBookingSuccessMsg(
-        `ვიზიტი წარმატებით დაიჯავშნა: ${bookingDoctor.name} (${selectedDate} - ${selectedSlot})`,
+        `ვიზიტი წარმატებით დაიჯავშნა: ${bookingDoctor.name} (${selectedDate} ${selectedSlot})`,
       );
       setBookingInProgressId(null);
       setBookingDoctor(null);
@@ -100,9 +100,22 @@ export default function HomePage({
       )}
 
       {isOffline && (
-        <div className="mb-6 p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs font-semibold flex items-center gap-2">
-          <span>⚠️</span> სერვერთან კავშირი შეზღუდულია — აქტიურია ადგილობრივი
-          Mock მონაცემები.
+        <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-300 flex items-center justify-between text-amber-900 shadow-sm animate-pulse">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📡</span>
+            <div>
+              <h4 className="font-bold text-sm">
+                სერვერთან კავშირი გათიშულია (სიმულაცია: API 500)
+              </h4>
+              <p className="text-xs text-amber-700">
+                ჩართულია Offline Fallback რეჟიმი — აპლიკაცია იყენებს ლოკალურ
+                Mock მონაცემებს.
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-bold bg-amber-200 text-amber-900 px-3 py-1 rounded-full shrink-0">
+            Offline Mode
+          </span>
         </div>
       )}
 
@@ -214,7 +227,6 @@ export default function HomePage({
                       </div>
                     </div>
 
-                    {/* ფასი და ადმინის წაშლის ღილაკი გვერდიგვერდ */}
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span className="text-xs font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg">
                         {doc.price}

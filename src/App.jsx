@@ -4,6 +4,16 @@ import { useDoctorStore } from "./store/useDoctorStore";
 
 const HomePage = lazy(() => import("./pages/HomePage"));
 
+// სიმულატორი შეცდომის გამოსაწვევად ErrorBoundary-ის შიგნით
+function CrashSimulator({ shouldCrash }) {
+  if (shouldCrash) {
+    throw new Error(
+      "სიმულირებული კრიტიკული შეცდომა Error Boundary-ის დასატესტად!",
+    );
+  }
+  return null;
+}
+
 export default function App() {
   const [currentPage, setCurrentPage] = useState("home"); // 'home' | 'about' | 'login'
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -11,7 +21,7 @@ export default function App() {
   // გლობალური Store-დან ექიმების რაოდენობის წამოღება Header Counter-ისთვის
   const doctorsCount = useDoctorStore((state) => state.doctors.length);
 
-  // მომხმარებლის ავტორიზაციის State
+  // საწყისად null, რათა გამოჩნდეს პირველი Welcome/Landing გვერდი
   const [currentUser, setCurrentUser] = useState(null);
   const [customNameInput, setCustomNameInput] = useState("");
 
@@ -19,12 +29,6 @@ export default function App() {
   const [showDevPanel, setShowDevPanel] = useState(false);
   const [simulateError, setSimulateError] = useState(false);
   const [shouldCrash, setShouldCrash] = useState(false);
-
-  if (shouldCrash) {
-    throw new Error(
-      "სიმულირებული კრიტიკული შეცდომა Error Boundary-ის დასატესტად!",
-    );
-  }
 
   const handleLogin = (role) => {
     const defaultNames = {
@@ -48,6 +52,7 @@ export default function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     setCustomNameInput("");
+    setShouldCrash(false);
     setCurrentPage("home");
   };
 
@@ -95,8 +100,15 @@ export default function App() {
             {currentUser ? (
               <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
                 <span className="text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-medium">
-                  👤 {currentUser.name}
+                  👤 {currentUser.name} ({currentUser.label})
                 </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage("login")}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition"
+                >
+                  როლის შეცვლა
+                </button>
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -198,166 +210,167 @@ export default function App() {
 
       {/* ძირითადი ხედები */}
       <div className="flex-1">
-        <ErrorBoundary>
-          <Suspense
-            fallback={
-              <div className="flex justify-center items-center py-20 text-slate-500 text-sm">
-                იტვირთება გვერდი...
-              </div>
-            }
-          >
-            {/* 1. ავტორიზაციის გვერდი */}
-            {currentPage === "login" && (
-              <div className="max-w-md mx-auto py-12 px-4">
-                <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xl">
-                  <div className="text-center mb-6">
-                    <span className="text-3xl">🔐</span>
-                    <h1 className="text-xl font-bold text-slate-900 mt-2">
-                      ავტორიზაცია პორტალზე
-                    </h1>
-                    <p className="text-xs text-slate-500 mt-1">
-                      მიუთითეთ თქვენი სახელი და აირჩიეთ სამუშაო სივრცე:
-                    </p>
-                  </div>
+        <Suspense
+          fallback={
+            <div className="flex justify-center items-center py-20 text-slate-500 text-sm">
+              იტვირთება გვერდი...
+            </div>
+          }
+        >
+          {/* 1. ავტორიზაციის გვერდი */}
+          {currentPage === "login" && (
+            <div className="max-w-md mx-auto py-12 px-4">
+              <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xl">
+                <div className="text-center mb-6">
+                  <span className="text-3xl">🔐</span>
+                  <h1 className="text-xl font-bold text-slate-900 mt-2">
+                    ავტორიზაცია პორტალზე
+                  </h1>
+                  <p className="text-xs text-slate-500 mt-1">
+                    მიუთითეთ თქვენი სახელი და აირჩიეთ სამუშაო სივრცე:
+                  </p>
+                </div>
 
-                  <div className="mb-5 text-left">
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      თქვენი სახელი და გვარი:
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="მაგ: ელენე ლაბარტყავა"
-                      value={customNameInput}
-                      onChange={(e) => setCustomNameInput(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white"
-                    />
-                  </div>
+                <div className="mb-5 text-left">
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    თქვენი სახელი და გვარი:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="მაგ: ელენე ლაბარტყავა"
+                    value={customNameInput}
+                    onChange={(e) => setCustomNameInput(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white"
+                  />
+                </div>
 
-                  <div className="space-y-3">
-                    <button
-                      type="button"
-                      onClick={() => handleLogin("patient")}
-                      className="w-full p-4 rounded-xl border border-slate-200 hover:border-sky-500 hover:bg-sky-50 text-left transition flex items-center justify-between group"
-                    >
-                      <div>
-                        <div className="font-bold text-slate-900 group-hover:text-sky-700">
-                          🧑‍💼 პაციენტის სივრცე
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          ექიმების მოძიება და ვიზიტის დაჯავშნა
-                        </div>
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => handleLogin("patient")}
+                    className="w-full p-4 rounded-xl border border-slate-200 hover:border-sky-500 hover:bg-sky-50 text-left transition flex items-center justify-between group"
+                  >
+                    <div>
+                      <div className="font-bold text-slate-900 group-hover:text-sky-700">
+                        🧑‍💼 პაციენტის სივრცე
                       </div>
-                      <span className="text-slate-400 group-hover:text-sky-600 font-bold">
-                        →
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleLogin("doctor")}
-                      className="w-full p-4 rounded-xl border border-slate-200 hover:border-sky-500 hover:bg-sky-50 text-left transition flex items-center justify-between group"
-                    >
-                      <div>
-                        <div className="font-bold text-slate-900 group-hover:text-sky-700">
-                          👨‍⚕️ ექიმის სამუშაო კაბინეტი
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          სამუშაო განრიგი და ჩაწერილი პაციენტები
-                        </div>
+                      <div className="text-xs text-slate-500">
+                        ექიმების მოძიება და ვიზიტის დაჯავშნა
                       </div>
-                      <span className="text-slate-400 group-hover:text-sky-600 font-bold">
-                        →
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleLogin("admin")}
-                      className="w-full p-4 rounded-xl border border-slate-200 hover:border-sky-500 hover:bg-sky-50 text-left transition flex items-center justify-between group"
-                    >
-                      <div>
-                        <div className="font-bold text-slate-900 group-hover:text-sky-700">
-                          ⚙️ ადმინისტრატორის პანელი
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          პერსონალის მართვა და ექიმის დამატება
-                        </div>
-                      </div>
-                      <span className="text-slate-400 group-hover:text-sky-600 font-bold">
-                        →
-                      </span>
-                    </button>
-                  </div>
+                    </div>
+                    <span className="text-slate-400 group-hover:text-sky-600 font-bold">
+                      →
+                    </span>
+                  </button>
 
                   <button
                     type="button"
-                    onClick={() => setCurrentPage("home")}
-                    className="mt-6 w-full py-2.5 text-xs text-slate-500 hover:text-slate-700 font-semibold text-center block"
+                    onClick={() => handleLogin("doctor")}
+                    className="w-full p-4 rounded-xl border border-slate-200 hover:border-sky-500 hover:bg-sky-50 text-left transition flex items-center justify-between group"
                   >
-                    ← დაბრუნება მთავარ გვერდზე
+                    <div>
+                      <div className="font-bold text-slate-900 group-hover:text-sky-700">
+                        👨‍⚕️ ექიმის სამუშაო კაბინეტი
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        სამუშაო განრიგი და ჩაწერილი პაციენტები
+                      </div>
+                    </div>
+                    <span className="text-slate-400 group-hover:text-sky-600 font-bold">
+                      →
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleLogin("admin")}
+                    className="w-full p-4 rounded-xl border border-slate-200 hover:border-sky-500 hover:bg-sky-50 text-left transition flex items-center justify-between group"
+                  >
+                    <div>
+                      <div className="font-bold text-slate-900 group-hover:text-sky-700">
+                        ⚙️ ადმინისტრატორის პანელი
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        პერსონალის მართვა და ექიმის დამატება
+                      </div>
+                    </div>
+                    <span className="text-slate-400 group-hover:text-sky-600 font-bold">
+                      →
+                    </span>
                   </button>
                 </div>
-              </div>
-            )}
 
-            {/* 2. მთავარი გვერდი */}
-            {currentPage === "home" &&
-              (currentUser ? (
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage("home")}
+                  className="mt-6 w-full py-2.5 text-xs text-slate-500 hover:text-slate-700 font-semibold text-center block"
+                >
+                  ← დაბრუნება მთავარ გვერდზე
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 2. მთავარი გვერდი */}
+          {currentPage === "home" &&
+            (currentUser ? (
+              <ErrorBoundary>
+                <CrashSimulator shouldCrash={shouldCrash} />
                 <HomePage
                   currentRole={currentUser.role}
                   currentUser={currentUser}
                   simulateError={simulateError}
                 />
-              ) : (
-                <div className="max-w-6xl mx-auto px-4 py-12">
-                  <section className="text-center py-12 sm:py-16 bg-linear-to-b from-sky-50/70 to-white rounded-3xl border border-sky-100 p-6 sm:p-12 mb-12 shadow-sm">
-                    <span className="bg-sky-100 text-sky-800 text-xs px-3 py-1.5 rounded-full font-bold uppercase tracking-wider">
-                      ინოვაციური ჯანდაცვის პლატფორმა
-                    </span>
-                    <h1 className="text-3xl sm:text-5xl font-black text-slate-900 mt-4 mb-4 tracking-tight leading-tight">
-                      დაჯავშნე ვიზიტი საუკეთესო{" "}
-                      <br className="hidden sm:inline" /> სამედიცინო
-                      სპეციალისტებთან
-                    </h1>
-                    <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto mb-8">
-                      MediCare Hub გაძლევთ საშუალებას რეალურ დროში იპოვოთ
-                      კვალიფიციური ექიმი, ნახოთ თავისუფალი საათები და მართოთ
-                      თქვენი ვიზიტები მარტივად.
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                      <button
-                        onClick={() => setCurrentPage("login")}
-                        className="px-7 py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2"
-                      >
-                        <span>🔐</span> გაიარეთ ავტორიზაცია ჯავშნისთვის
-                      </button>
-                      <button
-                        onClick={() => setCurrentPage("about")}
-                        className="px-7 py-3.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl transition"
-                      >
-                        გაიგეთ მეტი ჩვენ შესახებ
-                      </button>
-                    </div>
-                  </section>
-                </div>
-              ))}
-
-            {/* 3. ჩვენ შესახებ გვერდი */}
-            {currentPage === "about" && (
-              <div className="max-w-5xl mx-auto py-12 px-4 sm:px-6">
-                <div className="text-center max-w-2xl mx-auto mb-12">
-                  <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
-                    ინოვაციური ჯანდაცვა თითოეული ოჯახისთვის
+              </ErrorBoundary>
+            ) : (
+              <div className="max-w-6xl mx-auto px-4 py-12">
+                <section className="text-center py-12 sm:py-16 bg-linear-to-b from-sky-50/70 to-white rounded-3xl border border-sky-100 p-6 sm:p-12 mb-12 shadow-sm">
+                  <span className="bg-sky-100 text-sky-800 text-xs px-3 py-1.5 rounded-full font-bold uppercase tracking-wider">
+                    ინოვაციური ჯანდაცვის პლატფორმა
+                  </span>
+                  <h1 className="text-3xl sm:text-5xl font-black text-slate-900 mt-4 mb-4 tracking-tight leading-tight">
+                    დაჯავშნე ვიზიტი საუკეთესო{" "}
+                    <br className="hidden sm:inline" /> სამედიცინო
+                    სპეციალისტებთან
                   </h1>
-                  <p className="text-slate-600 text-sm sm:text-base">
-                    MediCare Hub აერთიანებს წამყვან ქართველ სპეციალისტებს ერთიან
-                    ციფრულ სივრცეში.
+                  <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto mb-8">
+                    MediCare Hub გაძლევთ საშუალებას რეალურ დროში იპოვოთ
+                    კვალიფიციური ექიმი, ნახოთ თავისუფალი საათები და მართოთ
+                    თქვენი ვიზიტები მარტივად.
                   </p>
-                </div>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button
+                      onClick={() => setCurrentPage("login")}
+                      className="px-7 py-3.5 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2"
+                    >
+                      <span>🔐</span> გაიარეთ ავტორიზაცია ჯავშნისთვის
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage("about")}
+                      className="px-7 py-3.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl transition"
+                    >
+                      გაიგეთ მეტი ჩვენ შესახებ
+                    </button>
+                  </div>
+                </section>
               </div>
-            )}
-          </Suspense>
-        </ErrorBoundary>
+            ))}
+
+          {/* 3. ჩვენ შესახებ გვერდი */}
+          {currentPage === "about" && (
+            <div className="max-w-5xl mx-auto py-12 px-4 sm:px-6">
+              <div className="text-center max-w-2xl mx-auto mb-12">
+                <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
+                  ინოვაციური ჯანდაცვა თითოეული ოჯახისთვის
+                </h1>
+                <p className="text-slate-600 text-sm sm:text-base">
+                  MediCare Hub აერთიანებს წამყვან ქართველ სპეციალისტებს ერთიან
+                  ციფრულ სივრცეში.
+                </p>
+              </div>
+            </div>
+          )}
+        </Suspense>
       </div>
 
       {/* სისტემური დიაგნოსტიკის პანელი */}
@@ -390,7 +403,13 @@ export default function App() {
             </button>
             <button
               type="button"
-              onClick={() => setShouldCrash(true)}
+              onClick={() => {
+                if (!currentUser) {
+                  // თუ ჯერ შესული არ ვართ, შევდივართ და მაშინვე ვტესტავთ შეცდომას
+                  handleLogin("patient");
+                }
+                setShouldCrash(true);
+              }}
               className="px-3 py-1.5 bg-rose-600 text-white rounded-lg font-semibold hover:bg-rose-700 transition text-left"
             >
               Runtime შეცდომა (Crash UI)
