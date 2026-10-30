@@ -102,6 +102,11 @@ export const useDoctorStore = create(
             ...state.bookings,
           ],
         })),
+        // ჯავშნის გაუქმება/წაშლა id-ით
+cancelBooking: (bookingId) =>
+  set((state) => ({
+    bookings: state.bookings.filter((b) => b.id !== bookingId),
+  })),
     }),
     {
       name: "medicare-hub-storage",
